@@ -1,0 +1,82 @@
+// prisma/schema.prisma
+// 数据库模型定义 — 全栈核心：前端看不见，但一切数据都在这里
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============ 用户模型 ============
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String    // bcrypt 加密存储，绝不明文
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // 关系：一个用户有多个 Todo 和 Tag
+  todos         Todo[]
+  tags          Tag[]
+}
+
+// ============ Todo 模型 ============
+model Todo {
+  id          String      @id @default(cuid()) //用户的唯一标识符，使用 cuid() 默认生成。
+  title       String
+  description String?
+  completed   Boolean     @default(false)
+  priority    Priority    @default(MEDIUM)
+  dueDate     DateTime?   // 截止日期
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // 外键：属于哪个用户
+  userId      String
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // @relation 定义了与 User 模型的关系，onDelete: Cascade 意味着如果用户被删除，其所有 Todo 也会被删除
+
+  // 多对多关系：一个 Todo 可以有多个 Tag
+  tags        TagsOnTodos[]
+
+  @@index([userId])       // 索引优化查询速度
+  @@index([dueDate])
+}
+
+// ============ 标签模型 ============
+model Tag {
+  id        String        @id @default(cuid())
+  name      String
+  color     String        @default("#6b7280") // hex 颜色
+  createdAt DateTime      @default(now())
+
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  todos     TagsOnTodos[]
+
+  // 同一用户下标签名唯一
+  @@unique([userId, name])
+}
+
+// ============ 多对多中间表 ============
+// 为什么需要这个？因为 Todo 和 Tag 是多对多关系
+// 一个 Todo 可以有多个 Tag，一个 Tag 可以用于多个 Todo
+model TagsOnTodos {
+  todoId    String
+  tagId     String
+  todo      Todo    @relation(fields: [todoId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([todoId, tagId]) // 复合主键，防止重复
+}
+
+// ============ 枚举：优先级 ============
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
