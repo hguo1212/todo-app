@@ -20,8 +20,9 @@ export type CreateTodoInput = {
 };
 
 // 更新 Todo 的表单数据（所有字段可选）
-export type UpdateTodoInput = Partial<CreateTodoInput> & {
+export type UpdateTodoInput = Partial<Omit<CreateTodoInput, "dueDate">> & {
   completed?: boolean;
+  dueDate?: string | null; // ← 允许 null（表示清除截止日期）
 };
 
 // 创建标签
