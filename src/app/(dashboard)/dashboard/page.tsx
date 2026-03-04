@@ -54,7 +54,6 @@ export default function DashboardPage() {
         const newSearch = params.toString();
         router.replace(
           window.location.pathname + (newSearch ? `?${newSearch}` : ""),
-          { replace: true },
         );
       }
     }
