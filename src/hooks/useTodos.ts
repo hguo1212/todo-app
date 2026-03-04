@@ -87,7 +87,14 @@ export function useTodos(filters?: {
   // 更新（包括勾选完成）
   const updateTodo = async (id: string, input: UpdateTodoInput) => {
     // 乐观更新：先在本地更新状态，如果失败再回滚
-    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, ...input } : t)));
+
+    setTodos((prev) =>
+      prev.map((t) => {
+        if (t.id !== id) return t;
+        const { dueDate, ...rest } = input;
+        return { ...t, ...rest };
+      }),
+    );
     const res = await fetch(`/api/todos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
