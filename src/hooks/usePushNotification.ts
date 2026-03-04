@@ -20,7 +20,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   // atob() 解码 Base64 字符串，得到原始二进制数据
   const rawData = window.atob(base64);
   // 将每个字符转换为对应的 char code，构造 Uint8Array
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
+  return Uint8Array.from(rawData.split("").map((char) => char.charCodeAt(0)));
 }
 
 export type NotificationPermission = "default" | "granted" | "denied";
@@ -93,7 +93,9 @@ export function usePushNotification() {
 
       const subscription = await swRegistration.pushManager.subscribe({
         userVisibleOnly: true, // 必须为 true，表示每次 push 都会显示通知
-        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey), //推送服务器用来向客户端应用发送消息的公钥
+        applicationServerKey: urlBase64ToUint8Array(
+          vapidPublicKey,
+        ) as unknown as ArrayBuffer,
       });
 
       // 把订阅信息发给服务器保存
