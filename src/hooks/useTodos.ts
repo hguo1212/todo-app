@@ -5,7 +5,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { TodoWithTags, CreateTodoInput, UpdateTodoInput } from "@/types";
 
-export function useTodos(filters?: { completed?: boolean; tagId?: string; priority?: string }) {
+export function useTodos(filters?: {
+  completed?: boolean;
+  tagId?: string;
+  priority?: string;
+}) {
   const [todos, setTodos] = useState<TodoWithTags[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -14,7 +18,8 @@ export function useTodos(filters?: { completed?: boolean; tagId?: string; priori
   const buildQuery = useCallback(() => {
     if (!filters) return "";
     const params = new URLSearchParams();
-    if (filters.completed !== undefined) params.set("completed", String(filters.completed));
+    if (filters.completed !== undefined)
+      params.set("completed", String(filters.completed));
     if (filters.tagId) params.set("tagId", filters.tagId);
     if (filters.priority) params.set("priority", filters.priority);
     const qs = params.toString();
@@ -37,7 +42,32 @@ export function useTodos(filters?: { completed?: boolean; tagId?: string; priori
     }
   }, [buildQuery]);
 
-  useEffect(() => { fetchTodos(); }, [fetchTodos]);
+  useEffect(() => {
+    fetchTodos();
+  }, [fetchTodos]);
+
+  // 监听来自 Service Worker 的消息，以便远程完成操作能及时同步
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const msg = event.data;
+      if (msg?.type === "todoCompleted" && msg.todoId) {
+        setTodos((prev) =>
+          prev.map((t) =>
+            t.id === msg.todoId ? { ...t, completed: true } : t,
+          ),
+        );
+      }
+    };
+
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener("message", handleMessage);
+    }
+    return () => {
+      if (navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener("message", handleMessage);
+      }
+    };
+  }, []);
 
   // 创建
   const createTodo = async (input: CreateTodoInput) => {
@@ -57,9 +87,7 @@ export function useTodos(filters?: { completed?: boolean; tagId?: string; priori
   // 更新（包括勾选完成）
   const updateTodo = async (id: string, input: UpdateTodoInput) => {
     // 乐观更新：先在本地更新状态，如果失败再回滚
-    setTodos((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...input } : t))
-    );
+    setTodos((prev) => prev.map((t) => (t.id === id ? { ...t, ...input } : t)));
     const res = await fetch(`/api/todos/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -89,5 +117,14 @@ export function useTodos(filters?: { completed?: boolean; tagId?: string; priori
   const toggleTodo = (id: string, completed: boolean) =>
     updateTodo(id, { completed });
 
-  return { todos, loading, error, createTodo, updateTodo, deleteTodo, toggleTodo, refetch: fetchTodos };
+  return {
+    todos,
+    loading,
+    error,
+    createTodo,
+    updateTodo,
+    deleteTodo,
+    toggleTodo,
+    refetch: fetchTodos,
+  };
 }

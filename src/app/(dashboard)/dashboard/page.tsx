@@ -5,11 +5,13 @@
 import { useSession } from "next-auth/react";
 import { useTodos } from "@/hooks/useTodos";
 import { useTags } from "@/hooks/useTags";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { TodoWithTags } from "@/types";
 import { formatDueDate, getDueDateStatus } from "@/lib/utils";
 import { signOut } from "next-auth/react";
 import { TodoEditModal } from "@/components/todo/TodoEditModal";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 
 const PRIORITY_CONFIG = {
   HIGH: { label: "高", color: "bg-red-100 text-red-700" },
@@ -29,12 +31,34 @@ export default function DashboardPage() {
   const { todos, loading, createTodo, updateTodo, toggleTodo, deleteTodo } =
     useTodos();
   const { tags, createTag } = useTags();
+  const router = useRouter();
 
   // 弹窗状态：undefined = 关闭，null = 新建模式，TodoWithTags = 编辑模式
   const [editingTodo, setEditingTodo] = useState<
     TodoWithTags | null | undefined
   >(undefined);
   const isModalOpen = editingTodo !== undefined;
+
+  // 如果 URL 上有 todoId 查询参数，尝试从已有 todo 列表中找到并打开编辑弹窗
+  useEffect(() => {
+    if (editingTodo === undefined) {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get("todoId");
+      if (id) {
+        const found = todos.find((t) => t.id === id);
+        if (found) {
+          setEditingTodo(found);
+        }
+        // 清理查询参数，避免刷新后重复打开
+        params.delete("todoId");
+        const newSearch = params.toString();
+        router.replace(
+          window.location.pathname + (newSearch ? `?${newSearch}` : ""),
+          { replace: true },
+        );
+      }
+    }
+  }, [todos, editingTodo, router]);
 
   const pending = todos.filter((t) => !t.completed);
   const completed = todos.filter((t) => t.completed);
@@ -50,6 +74,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationBell />
             <span className="text-sm text-slate-600">
               Hi, {session?.user?.name}
             </span>
@@ -73,6 +98,7 @@ export default function DashboardPage() {
           </span>
           添加新任务
         </button>
+
         {loading ? (
           <div className="text-center py-16 text-slate-400 text-sm">
             加载中...
@@ -114,6 +140,7 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
       <TodoEditModal
         open={isModalOpen}
         todo={editingTodo ?? null}

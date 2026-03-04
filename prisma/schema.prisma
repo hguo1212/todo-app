@@ -22,6 +22,7 @@ model User {
   // 关系：一个用户有多个 Todo 和 Tag
   todos         Todo[]
   tags          Tag[]
+  pushSubscriptions PushSubscription[]
 }
 
 // ============ Todo 模型 ============
@@ -32,6 +33,7 @@ model Todo {
   completed   Boolean     @default(false)
   priority    Priority    @default(MEDIUM)
   dueDate     DateTime?   // 截止日期
+  nextReminderAt DateTime? // 下次提醒时间（用于"稍后提醒"功能）
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
@@ -45,6 +47,7 @@ model Todo {
 
   @@index([userId])       // 索引优化查询速度
   @@index([dueDate])
+  @@index([nextReminderAt])
 }
 
 // ============ 标签模型 ============
@@ -72,6 +75,22 @@ model TagsOnTodos {
   tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([todoId, tagId]) // 复合主键，防止重复
+}
+
+// ============ Push 订阅模型 ============
+// 每个浏览器/设备对应一条记录
+// endpoint 是浏览器推送服务的唯一 URL，是推送的目标地址
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique  // 浏览器推送服务地址，每个设备唯一
+  p256dh    String   // 加密公钥
+  auth      String   // 认证密钥
+  createdAt DateTime @default(now())
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ============ 枚举：优先级 ============
