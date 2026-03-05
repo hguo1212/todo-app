@@ -26,10 +26,8 @@ const remindLaterSchema = z.object({
   minutesLater: z.number().int().min(1).max(1440), // 最多延迟 24 小时
 });
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { id: string } },
-) {
+export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getAuthUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 

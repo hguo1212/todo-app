@@ -11,9 +11,13 @@ export const metadata: Metadata = {
   description: "Next.js + Prisma + PostgreSQL + NextAuth",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
       <body className={inter.className}>
         {/* Providers 包裹整个应用，提供 Session 上下文 */}
         <Providers>{children}</Providers>
